@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -11,6 +13,11 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Login submit:", form);
+    navigate("/menu");
+  };
+
+  const handleRegister = () => {
+    navigate("/registrar-usuario");
   };
 
   return (
@@ -73,11 +80,12 @@ export default function Login() {
             type="button"
             className="btn btn-outline-dark w-100"
             style={{ borderWidth: 2, borderRadius: 12 }}
+            onClick={handleRegister}
           >
             Registrar
           </button>
 
-        {/* Link "Olvidé mi contraseña" */}
+          {/* Link "Olvidé mi contraseña" */}
           <div className="text-center mb-3">
             <a
               href="#"
