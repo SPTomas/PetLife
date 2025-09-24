@@ -1,19 +1,26 @@
-// src/components/ModificarUsuario.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../lib/api";
 
 export default function ModificarUsuario() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    nombre: "Martín",
-    email: "martin@example.com",
-    telefono: "351-1234567",
-  });
+  const [form, setForm] = useState({ nombre: "", email: "", telefono: "" });
   const [showConfirmSave, setShowConfirmSave] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    api.get("/me")
+      .then(r => setForm({
+        nombre: r.data.nombre || "",
+        email: r.data.email || "",
+        telefono: r.data.telefono || ""
+      }))
+      .catch(e => setErr(e.response?.data?.error || "No se pudo cargar el perfil"));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,21 +32,32 @@ export default function ModificarUsuario() {
     setShowConfirmSave(true);
   };
 
-  const confirmSave = () => {
+  const confirmSave = async () => {
     setShowConfirmSave(false);
     setSaving(true);
-    // TODO: enviar cambios al backend
-    setSaved(true);
-    setTimeout(() => navigate("/consultar-usuario"), 1200);
+    setErr("");
+    try {
+      await api.put("/me", { nombre: form.nombre, telefono: form.telefono });
+      setSaved(true);
+      setTimeout(() => navigate("/consultar-usuario"), 1200);
+    } catch (e) {
+      setErr(e.response?.data?.error || "No se pudo actualizar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
     if (!saving) navigate("/consultar-usuario");
   };
 
-  const confirmDelete = () => {
-    // TODO: eliminar cuenta en backend
-    navigate("/login");
+  const confirmDelete = async () => {
+    try {
+      await api.delete("/me");
+      navigate("/login");
+    } catch (e) {
+      alert(e.response?.data?.error || "No se pudo eliminar la cuenta");
+    }
   };
 
   return (
@@ -52,14 +70,13 @@ export default function ModificarUsuario() {
           Editar Usuario
         </h4>
 
-        {/* Éxito de guardado */}
+        {err && <div className="alert alert-danger py-2">{err}</div>}
         {saved && (
           <div className="alert alert-success py-2" role="alert">
             Datos actualizados con éxito. Redirigiendo…
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label className="form-label">Nombre</label>
@@ -83,7 +100,7 @@ export default function ModificarUsuario() {
               value={form.email}
               onChange={handleChange}
               required
-              disabled={saving}
+              disabled
             />
           </div>
 

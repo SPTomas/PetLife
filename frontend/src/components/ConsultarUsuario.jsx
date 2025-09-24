@@ -1,20 +1,22 @@
-// src/components/ConsultarUsuario.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../lib/api";
+import { signOut } from "../services/authService";
 
 export default function ConsultarUsuario() {
   const navigate = useNavigate();
   const [showLogout, setShowLogout] = useState(false);
+  const [usuario, setUsuario] = useState(null);
+  const [err, setErr] = useState("");
 
-  // Mock (luego vendrá del backend)
-  const usuario = {
-    nombre: "Martín",
-    email: "martin@example.com",
-    telefono: "351-1234567",
-  };
+  useEffect(() => {
+    api.get("/me")
+      .then(r => setUsuario(r.data))
+      .catch(e => setErr(e.response?.data?.error || "No se pudo cargar el perfil"));
+  }, []);
 
-  const confirmLogout = () => {
-    // TODO: limpiar session/token si corresponde
+  const confirmLogout = async () => {
+    await signOut();
     navigate("/login");
   };
 
@@ -26,44 +28,48 @@ export default function ConsultarUsuario() {
       >
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between mb-3">
-          <h4 className="fw-semibold" style={{ color: "#2389c0" }}>
-            Mi Cuenta
-          </h4>
+          <h4 className="fw-semibold" style={{ color: "#2389c0" }}>Mi Cuenta</h4>
           <button className="btn btn-outline-dark btn-sm" onClick={() => navigate("/menu")}>
             Volver
           </button>
         </div>
 
-        {/* Datos */}
-        <div className="mb-3">
-          <strong>Nombre:</strong>
-          <p>{usuario.nombre}</p>
-        </div>
-        <div className="mb-3">
-          <strong>Email:</strong>
-          <p>{usuario.email}</p>
-        </div>
-        <div className="mb-3">
-          <strong>Teléfono:</strong>
-          <p>{usuario.telefono}</p>
-        </div>
+        {err && <div className="alert alert-danger">{err}</div>}
+        {!usuario && !err && <div>Cargando...</div>}
 
-        <div className="text-center mt-4">
-          <button
-            className="btn btn-primary w-100 mb-2"
-            style={{ borderRadius: 12 }}
-            onClick={() => navigate("/modificar-usuario")}
-          >
-            Editar datos
-          </button>
-          <button
-            className="btn btn-warning w-100"
-            style={{ borderRadius: 12 }}
-            onClick={() => setShowLogout(true)}
-          >
-            Cerrar sesión
-          </button>
-        </div>
+        {usuario && (
+          <>
+            <div className="mb-3">
+              <strong>Nombre:</strong>
+              <p>{usuario.nombre || "-"}</p>
+            </div>
+            <div className="mb-3">
+              <strong>Email:</strong>
+              <p>{usuario.email}</p>
+            </div>
+            <div className="mb-3">
+              <strong>Teléfono:</strong>
+              <p>{usuario.telefono || "-"}</p>
+            </div>
+
+            <div className="text-center mt-4">
+              <button
+                className="btn btn-primary w-100 mb-2"
+                style={{ borderRadius: 12 }}
+                onClick={() => navigate("/modificar-usuario")}
+              >
+                Editar datos
+              </button>
+              <button
+                className="btn btn-warning w-100"
+                style={{ borderRadius: 12 }}
+                onClick={() => setShowLogout(true)}
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Modal cerrar sesión */}
         {showLogout && (

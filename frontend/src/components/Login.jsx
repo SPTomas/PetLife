@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmail } from "../services/authService";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [err, setErr] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -10,10 +12,15 @@ export default function Login() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submit:", form);
-    navigate("/menu");
+    setErr("");
+    try {
+      await signInWithEmail(form.email, form.password);
+      navigate("/menu");
+    } catch (e) {
+      setErr(e.message || "Error al iniciar sesión");
+    }
   };
 
   const handleRegister = () => {
@@ -40,6 +47,8 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
+          {err && <div className="alert alert-danger py-2">{err}</div>}
+
           <div className="mb-2">
             <small className="text-muted d-block">Usuario:</small>
             <input
@@ -66,16 +75,10 @@ export default function Login() {
             />
           </div>
 
-          {/* Iniciar sesión */}
-          <button
-            type="submit"
-            className="btn btn-dark w-100 mb-2"
-            style={{ borderRadius: 12 }}
-          >
+          <button type="submit" className="btn btn-dark w-100 mb-2" style={{ borderRadius: 12 }}>
             Iniciar sesión
           </button>
 
-          {/* Registrar */}
           <button
             type="button"
             className="btn btn-outline-dark w-100"
@@ -85,12 +88,8 @@ export default function Login() {
             Registrar
           </button>
 
-          {/* Link "Olvidé mi contraseña" */}
           <div className="text-center mb-3">
-            <a
-              href="#"
-              style={{ color: "#0b6fa4", textDecoration: "none", fontSize: 14 }}
-            >
+            <a href="#" style={{ color: "#0b6fa4", textDecoration: "none", fontSize: 14 }}>
               Olvidé mi contraseña
             </a>
           </div>
