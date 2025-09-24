@@ -12,7 +12,7 @@ export default function Footer() {
 
         {/* Icono vacuna */}
         <button className="btn btn-light d-flex flex-column align-items-center">
-          <i className="bi bi-syringe fs-4"></i>
+          <i className="bi bi-bandaid fs-4"></i>
           <small>Vacuna</small>
         </button>
 
