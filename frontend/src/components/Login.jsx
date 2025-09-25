@@ -1,7 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
+
+  // Colores de marca
+  const BRAND = "#2389C0";   // azul PetLife
+  const BRAND_DARK = "#0b6fa4";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -11,13 +17,24 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Login submit:", form);
+    navigate("/menu");
+  };
+
+  const handleRegister = () => {
+    navigate("/registrar-usuario");
   };
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    // Fondo blanco (sin gris)
+    <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: "#fff" }}>
       <div
-        className="bg-white p-4 shadow-sm"
-        style={{ width: 340, borderRadius: "22px", border: "2px solid #111" }}
+        className="bg-white p-4"
+        style={{
+          width: 340,
+          borderRadius: "22px",
+          border: "none",                 // sin borde feo
+          boxShadow: "0 8px 24px rgba(0,0,0,0.08)", // sombra suave
+        }}
       >
         {/* Logo */}
         <div className="text-center mb-3">
@@ -26,7 +43,7 @@ export default function Login() {
             alt="PetLife"
             style={{ width: 100, height: "auto", objectFit: "contain" }}
           />
-          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: "#2389c0ff" }}>
+          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: BRAND }}>
             PetLife
           </h3>
         </div>
@@ -59,29 +76,40 @@ export default function Login() {
             />
           </div>
 
-          {/* Iniciar sesión */}
+          {/* Iniciar sesión (primario marca) */}
           <button
             type="submit"
-            className="btn btn-dark w-100 mb-2"
-            style={{ borderRadius: 12 }}
+            className="btn w-100 mb-2"
+            style={{
+              borderRadius: 12,
+              backgroundColor: BRAND,
+              border: `2px solid ${BRAND}`,
+              color: "#fff",
+            }}
           >
             Iniciar sesión
           </button>
 
-          {/* Registrar */}
+          {/* Registrar (outline marca) */}
           <button
             type="button"
-            className="btn btn-outline-dark w-100"
-            style={{ borderWidth: 2, borderRadius: 12 }}
+            className="btn w-100"
+            style={{
+              borderRadius: 12,
+              backgroundColor: "#fff",
+              border: `2px solid ${BRAND}`,
+              color: BRAND,
+            }}
+            onClick={handleRegister}
           >
             Registrar
           </button>
 
-        {/* Link "Olvidé mi contraseña" */}
-          <div className="text-center mb-3">
+          {/* Link "Olvidé mi contraseña" */}
+          <div className="text-center mb-1 mt-2">
             <a
               href="#"
-              style={{ color: "#0b6fa4", textDecoration: "none", fontSize: 14 }}
+              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
             >
               Olvidé mi contraseña
             </a>
