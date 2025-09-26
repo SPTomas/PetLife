@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String    @id // = user.id (sub) de Supabase
+  correo        String    @unique
+  nombre        String?
+  telefono      String?
+  mascotas      Mascota[]
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+}
+
+model Mascota {
+  id            Int       @id @default(autoincrement())
+  duenioId      String
+  duenio        Usuario   @relation(fields: [duenioId], references: [id], onDelete: Cascade)
+
+  nombre        String
+  raza          String?
+  sexo          String?
+  edadMeses     Int?
+  pesoKg        Float?
+
+  cumpleDia     Int?
+  cumpleMes     Int?
+
+  photoPath     String?
+
+  notas         Nota[]
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  @@index([duenioId])
+}
+
+model Nota {
+  id            Int      @id @default(autoincrement())
+  mascotaId     Int
+  mascota       Mascota  @relation(fields: [mascotaId], references: [id], onDelete: Cascade)
+  titulo        String
+  contenido     String
+  imagePath     String?
+  fecha         DateTime @default(now())
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([mascotaId])
+}
