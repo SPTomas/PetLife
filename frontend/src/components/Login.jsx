@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const navigate = useNavigate();
@@ -15,7 +14,7 @@ export default function Login() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Login submit:", form);
     navigate("/menu");
@@ -51,8 +50,6 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          {err && <div className="alert alert-danger py-2">{err}</div>}
-
           <div className="mb-2">
             <small className="text-muted d-block">Usuario:</small>
             <input
