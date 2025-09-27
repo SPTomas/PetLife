@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmail } from "../services/authService";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
   const navigate = useNavigate();
 
   // Colores de marca
-  const BRAND = "#2389C0";   // azul PetLife
+  const BRAND = "#2389C0";
   const BRAND_DARK = "#0b6fa4";
 
   const handleChange = (e) => {
@@ -14,26 +17,36 @@ export default function Login() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submit:", form);
-    navigate("/menu");
+    setErr("");
+    setLoading(true);
+    try {
+      await signInWithEmail(form.email.trim(), form.password);
+      navigate("/menu");
+    } catch (e) {
+      setErr(e?.message || "Error al iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRegister = () => {
-    navigate("/registrar-usuario");
+  const handleRegister = () => navigate("/registrar-usuario");
+  const handleForgot = (e) => {
+    e.preventDefault();
+    navigate("/recuperar-password");
   };
 
   return (
-    // Fondo blanco (sin gris)
+    // Fondo blanco (como Loginvisual)
     <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: "#fff" }}>
       <div
         className="bg-white p-4"
         style={{
           width: 340,
           borderRadius: "22px",
-          border: "none",                 // sin borde feo
-          boxShadow: "0 8px 24px rgba(0,0,0,0.08)", // sombra suave
+          border: "none",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
         }}
       >
         {/* Logo */}
@@ -50,6 +63,8 @@ export default function Login() {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
+          {err && <div className="alert alert-danger py-2">{err}</div>}
+
           <div className="mb-2">
             <small className="text-muted d-block">Usuario:</small>
             <input
@@ -60,6 +75,7 @@ export default function Login() {
               value={form.email}
               onChange={handleChange}
               required
+              autoComplete="email"
             />
           </div>
 
@@ -73,6 +89,7 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               required
+              autoComplete="current-password"
             />
           </div>
 
@@ -80,6 +97,7 @@ export default function Login() {
           <button
             type="submit"
             className="btn w-100 mb-2"
+            disabled={loading}
             style={{
               borderRadius: 12,
               backgroundColor: BRAND,
@@ -87,33 +105,34 @@ export default function Login() {
               color: "#fff",
             }}
           >
-            Iniciar sesión
+            {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>
+
+          {/* Link "Olvidé mi contraseña" (azul) */}
+          <div className="text-center mb-2">
+            <a
+              href="#"
+              onClick={handleForgot}
+              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
+            >
+              Olvidé mi contraseña
+            </a>
+          </div>
 
           {/* Registrar (outline marca) */}
           <button
             type="button"
             className="btn w-100"
+            onClick={handleRegister}
             style={{
               borderRadius: 12,
               backgroundColor: "#fff",
               border: `2px solid ${BRAND}`,
               color: BRAND,
             }}
-            onClick={handleRegister}
           >
             Registrar
           </button>
-
-          {/* Link "Olvidé mi contraseña" */}
-          <div className="text-center mb-1 mt-2">
-            <a
-              href="#"
-              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
-            >
-              Olvidé mi contraseña
-            </a>
-          </div>
         </form>
       </div>
     </div>
