@@ -2,7 +2,13 @@ import { api } from '../lib/api';
 
 export async function listarMascotas() {
   const { data } = await api.get('/me/mascotas'); // alias /me/dogs
-  return data;
+  return data; // [ { id, nombre, raza?, photoPath?, ... } ]
+}
+
+export async function obtenerMascota(id) {
+  // Devuelve el detalle completo de una mascota
+  const { data } = await api.get(`/me/mascotas/${id}`);
+  return data; // { id, nombre, raza?, sexo?, edadMeses?, pesoKg?, photoPath?, ... }
 }
 
 export async function crearMascota(payload) {

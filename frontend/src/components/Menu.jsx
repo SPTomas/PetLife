@@ -2,25 +2,31 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarMascotas } from "../services/mascotasService";
 import { supabase } from "../lib/supabase";
+
 export default function Menu() {
   const [pets, setPets] = useState([]);
   const [err, setErr] = useState("");
   const navigate = useNavigate();
 
-
-  supabase.auth.getSession().then(({ data }) => {
-  console.log("SESSION:", data);
-});
-
-  const handleAddPet = () => navigate("/registrar-mascota");
-  const handleSelect = (pet) => console.log("Abrir perfil de:", pet.nombre);
-  const handleProfile = () => navigate("/consultar-usuario");
-
   useEffect(() => {
+    // evitar que se ejecute en cada render
+    supabase.auth.getSession().then(({ data }) => {
+      console.log("SESSION:", data);
+    });
+
     listarMascotas()
       .then(setPets)
-      .catch(e => setErr(e.response?.data?.error || "No se pudieron cargar tus mascotas"));
+      .catch(e => setErr(e?.response?.data?.error || e?.message || "No se pudieron cargar tus mascotas"));
   }, []);
+
+  const handleAddPet = () => navigate("/registrar-mascota");
+
+  const handleSelect = (pet) => {
+    // Navega al MenuPerro con :id y manda un preview inicial para que se renderice al toque
+    navigate(`/perro/${pet.id}`, { state: { petPreview: pet } });
+  };
+
+  const handleProfile = () => navigate("/consultar-usuario");
 
   const colors = {
     bgTop: "linear-gradient(180deg, #E9F6FF 0%, #F7FBFF 100%)",
@@ -58,10 +64,11 @@ export default function Menu() {
                   onClick={() => handleSelect(pet)}
                 >
                   <img
-                    src={"/imagenes/pets/default.png"}
+                    src={pet.photoPath || "/imagenes/pets/default.png"}
                     alt={pet.nombre}
                     className="me-3"
                     style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, border: "1px solid #e6e6e6", background: "#f8fafc" }}
+                    onError={(e) => { e.currentTarget.src = "/imagenes/pets/default.png"; }}
                   />
                   <span className="fs-5 fw-semibold" style={{ color: colors.ink }}>
                     {pet.nombre}{pet.raza ? ` (${pet.raza})` : ""}
