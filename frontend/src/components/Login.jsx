@@ -108,17 +108,6 @@ export default function Login() {
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>
 
-          {/* Link "Olvidé mi contraseña" (azul) */}
-          <div className="text-center mb-2">
-            <a
-              href="#"
-              onClick={handleForgot}
-              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
-            >
-              Olvidé mi contraseña
-            </a>
-          </div>
-
           {/* Registrar (outline marca) */}
           <button
             type="button"
@@ -133,6 +122,19 @@ export default function Login() {
           >
             Registrar
           </button>
+
+          {/* Link "Olvidé mi contraseña" (azul) */}
+          <div className="text-center mb-2">
+            <a
+              href="#"
+              onClick={handleForgot}
+              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
+            >
+              Olvidé mi contraseña
+            </a>
+          </div>
+
+
         </form>
       </div>
     </div>
