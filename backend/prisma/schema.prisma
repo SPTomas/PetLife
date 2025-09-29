@@ -23,13 +23,17 @@ model Mascota {
   duenio        Usuario   @relation(fields: [duenioId], references: [id], onDelete: Cascade)
 
   nombre        String
-  sexo          String            @db.VarChar(10)   // "macho" | "hembra" (desde el <select>)
+  sexo          String            @db.VarChar(10)   // "macho" | "hembra"
   tamano        String?           @db.VarChar(10)   // "pequeño" | "mediano" | "grande"
   raza          String?
   pesoKg        Float?
   edadMeses     Int?
   cumpleDia     Int?
   cumpleMes     Int?
+
+  // ✅ NUEVOS: para mostrar dd/mm/yyyy y año
+  fechaNacimiento DateTime?
+  nacAnio         Int?
 
   // foto única (si la usás)
   fotoBucket    String?

@@ -1,23 +1,54 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// frontend/src/components/ConsultarUsuario.jsx
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import { signOut } from "../services/authService";
 
 export default function ConsultarUsuario() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Detecta a dónde volver:
+  // - Si el que navegó acá envió un "state.from", volvemos ahí.
+  // - Si hay historial previo, usamos navigate(-1).
+  // - Si no hay nada de lo anterior, caemos a "/menu".
+  const fallback = useMemo(() => {
+    // Permite pasar un string o un objeto { pathname, search, ... }
+    const from = location.state?.from ?? location.state?.returnTo ?? null;
+    return from || "/menu";
+  }, [location.state]);
+
+  const handleBack = () => {
+    // Si el caller nos mandó "forceFallback", usamos fallback directo
+    if (location.state?.forceFallback) {
+      navigate(fallback, { replace: false });
+      return;
+    }
+    // Si hay historial suficiente, volvemos una página
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Si entraron directo (sin historial), vamos al fallback
+      navigate(fallback, { replace: false });
+    }
+  };
+
   const [showLogout, setShowLogout] = useState(false);
   const [usuario, setUsuario] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    api.get("/me")
-      .then(r => setUsuario(r.data))
-      .catch(e => setErr(e.response?.data?.error || "No se pudo cargar el perfil"));
+    let alive = true;
+    api
+      .get("/me")
+      .then((r) => { if (alive) setUsuario(r.data); })
+      .catch((e) => setErr(e.response?.data?.error || "No se pudo cargar el perfil"));
+    return () => { alive = false; };
   }, []);
 
   const confirmLogout = async () => {
     await signOut();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -29,7 +60,7 @@ export default function ConsultarUsuario() {
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between mb-3">
           <h4 className="fw-semibold" style={{ color: "#2389c0" }}>Mi Cuenta</h4>
-          <button className="btn btn-outline-dark btn-sm" onClick={() => navigate("/menu")}>
+          <button className="btn btn-outline-dark btn-sm" onClick={handleBack}>
             Volver
           </button>
         </div>
@@ -41,22 +72,22 @@ export default function ConsultarUsuario() {
           <>
             <div className="mb-3">
               <strong>Nombre:</strong>
-              <p>{usuario.nombre || "-"}</p>
+              <p className="mb-0">{usuario.nombre || "-"}</p>
             </div>
             <div className="mb-3">
               <strong>Email:</strong>
-              <p>{usuario.email}</p>
+              <p className="mb-0">{usuario.email}</p>
             </div>
             <div className="mb-3">
               <strong>Teléfono:</strong>
-              <p>{usuario.telefono || "-"}</p>
+              <p className="mb-0">{usuario.telefono || "-"}</p>
             </div>
 
             <div className="text-center mt-4">
               <button
                 className="btn btn-primary w-100 mb-2"
                 style={{ borderRadius: 12 }}
-                onClick={() => navigate("/modificar-usuario")}
+                onClick={() => navigate("/modificar-usuario", { state: { from: location.pathname } })}
               >
                 Editar datos
               </button>

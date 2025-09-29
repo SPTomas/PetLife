@@ -69,16 +69,21 @@ app.put('/api/me', requireAuth, async (req, res, next) => {
 const mascotaCreateSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   sexo: z.string().min(1, 'El sexo es obligatorio'),
-  tamano: z.string().optional(), // "pequeño" | "mediano" | "grande"
+  tamano: z.string().optional(),        // "pequeño" | "mediano" | "grande"
   raza: z.string().optional(),
   edadMeses: z.coerce.number().int().min(0).optional(),
   pesoKg: z.coerce.number().min(0).optional(),
   cumpleDia: z.coerce.number().int().min(1).max(31).optional(),
   cumpleMes: z.coerce.number().int().min(1).max(12).optional(),
+
+  // ✅ NUEVOS CAMPOS: fecha completa y año
+  fechaNacimiento: z.coerce.date().optional(),   // acepta ISO y Date
+  nacAnio: z.coerce.number().int().optional(),   // ej. 2021
 });
 
 const mascotaUpdateSchema = mascotaCreateSchema.partial();
 
+// Listado
 app.get(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, next) => {
   try {
     const mascotas = await prisma.mascota.findMany({
@@ -91,6 +96,19 @@ app.get(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, next
   }
 });
 
+// Obtener una mascota (DETALLE) ✅
+app.get(['/api/me/mascotas/:id', '/api/me/dogs/:id'], requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const mascota = await prisma.mascota.findUnique({ where: { id } });
+    if (!mascota || mascota.duenioId !== req.user.id) {
+      return res.status(404).json({ error: 'Mascota no encontrada' });
+    }
+    res.json(mascota);
+  } catch (err) { next(err); }
+});
+
+// Crear
 app.post(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, next) => {
   try {
     // Normalizar tamaño → tamano
@@ -113,10 +131,14 @@ app.post(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, nex
         cumpleDia:  b.cumpleDia ?? null,
         cumpleMes:  b.cumpleMes ?? null,
 
-        // 👇 NUEVO: Campos de foto (opcionales)
+        // ✅ NUEVO: persistimos fecha/año
+        fechaNacimiento: b.fechaNacimiento ?? null,
+        nacAnio:         b.nacAnio ?? null,
+
+        // Campos de foto (opcionales)
         fotoBucket:     raw.fotoBucket ?? null,
-        fotoPath:       raw.fotoPath ?? null,      // OJO: el front enviará fotoPath
-        fotoUrl:        raw.fotoUrl ?? null,       // si usás bucket público
+        fotoPath:       raw.fotoPath ?? null,
+        fotoUrl:        raw.fotoUrl ?? null,
         fotoSizeBytes:  raw.fotoSizeBytes ?? null,
         fotoWidth:      raw.fotoWidth ?? null,
         fotoHeight:     raw.fotoHeight ?? null,
@@ -128,7 +150,7 @@ app.post(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, nex
   } catch (err) { next(err); }
 });
 
-
+// Actualizar
 app.put(['/api/me/mascotas/:id', '/api/me/dogs/:id'], requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -156,6 +178,10 @@ app.put(['/api/me/mascotas/:id', '/api/me/dogs/:id'], requireAuth, async (req, r
         cumpleDia:  b.cumpleDia ?? existing.cumpleDia,
         cumpleMes:  b.cumpleMes ?? existing.cumpleMes,
 
+        // ✅ NUEVO
+        fechaNacimiento: b.fechaNacimiento ?? existing.fechaNacimiento,
+        nacAnio:         b.nacAnio ?? existing.nacAnio,
+
         // Campos de foto (si vienen)
         fotoBucket:     raw.fotoBucket ?? existing.fotoBucket,
         fotoPath:       raw.fotoPath ?? existing.fotoPath,
@@ -171,7 +197,7 @@ app.put(['/api/me/mascotas/:id', '/api/me/dogs/:id'], requireAuth, async (req, r
   } catch (err) { next(err); }
 });
 
-
+// Eliminar
 app.delete(
   ['/api/me/mascotas/:id', '/api/me/dogs/:id'],
   requireAuth,

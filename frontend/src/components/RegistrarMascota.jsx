@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { crearMascota } from "../services/mascotasService";
-import { uploadPetPhoto } from "../lib/supabase";        // 👈 NUEVO
+import { uploadPetPhoto } from "../lib/supabase";
 import RAZAS from "../data/razas_perros.json";
 
 // Helpers fecha/edad
@@ -18,7 +18,7 @@ function validarFechaYCrear(d, m, y) {
   return dt;
 }
 
-// 👇 (opcional) obtener width/height reales del archivo para guardarlos
+// (opcional) obtener width/height reales del archivo para guardarlos
 async function getImageSize(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -48,7 +48,7 @@ export default function RegistrarMascota() {
   const [preview, setPreview] = useState(null);
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);     // 👈 NUEVO (UX)
+  const [loading, setLoading] = useState(false);
 
   const meses = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
   const dias  = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
@@ -108,7 +108,7 @@ export default function RegistrarMascota() {
     if (!form.nombre.trim()) return setErr("El nombre es obligatorio.");
     if (!form.sexo) return setErr("Seleccioná el sexo (macho o hembra).");
 
-    let edadMeses, cumpleDia, cumpleMes;
+    let edadMeses, cumpleDia, cumpleMes, fechaNacimiento, nacAnio;
     if (form.nacDia || form.nacMes || form.nacAnio) {
       if (!form.nacDia || !form.nacMes || !form.nacAnio) {
         return setErr("Completá día, mes y año (o dejá todo en blanco).");
@@ -119,6 +119,9 @@ export default function RegistrarMascota() {
       edadMeses = edadEnMesesDesde(dt);
       cumpleDia = dt.getDate();
       cumpleMes = dt.getMonth() + 1;
+      // 👉 NUEVO: guardamos ISO y año para que el detalle muestre dd/mm/yyyy
+      fechaNacimiento = dt.toISOString();
+      nacAnio = dt.getFullYear();
     }
 
     try {
@@ -149,8 +152,11 @@ export default function RegistrarMascota() {
         edadMeses,
         cumpleDia,
         cumpleMes,
+        // 👉 NUEVO: estos dos permiten mostrar el año en DetallePerro
+        fechaNacimiento,            // ISO
+        nacAnio,                    // año numérico
 
-        // Campos de foto -> tu backend ya los guarda en Prisma
+        // Campos de foto
         fotoBucket,
         fotoPath,
         fotoUrl,
