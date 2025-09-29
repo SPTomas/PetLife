@@ -1,8 +1,11 @@
+// frontend/src/components/RegistrarMascota.jsx
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { crearMascota } from "../services/mascotasService";
-import RAZAS from "../data/razas_perros.json"; // ES (incluye "Sin raza definida")
+import { uploadPetPhoto } from "../lib/supabase";        // 👈 NUEVO
+import RAZAS from "../data/razas_perros.json";
 
+// Helpers fecha/edad
 function edadEnMesesDesde(fecha) {
   const hoy = new Date();
   let meses = (hoy.getFullYear() - fecha.getFullYear()) * 12 + (hoy.getMonth() - fecha.getMonth());
@@ -15,13 +18,24 @@ function validarFechaYCrear(d, m, y) {
   return dt;
 }
 
+// 👇 (opcional) obtener width/height reales del archivo para guardarlos
+async function getImageSize(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 export default function RegistrarMascota() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
     nombre: "",
-    sexo: "",         // obligatorio
+    sexo: "",
     tamaño: "",
     raza: "",
     peso: "",
@@ -34,6 +48,7 @@ export default function RegistrarMascota() {
   const [preview, setPreview] = useState(null);
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);     // 👈 NUEVO (UX)
 
   const meses = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
   const dias  = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
@@ -88,6 +103,7 @@ export default function RegistrarMascota() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setOk(""); setErr("");
+    if (loading) return;
 
     if (!form.nombre.trim()) return setErr("El nombre es obligatorio.");
     if (!form.sexo) return setErr("Seleccioná el sexo (macho o hembra).");
@@ -106,21 +122,51 @@ export default function RegistrarMascota() {
     }
 
     try {
+      setLoading(true);
+
+      // 1) Subir imagen si hay y obtener datos
+      let fotoBucket, fotoPath, fotoUrl, fotoSizeBytes, fotoWidth, fotoHeight, fotoFormat;
+      if (form.foto) {
+        const dims = await getImageSize(form.foto).catch(() => null);
+        const up = await uploadPetPhoto(form.foto); // sube a bucket 'pets'
+
+        fotoBucket    = up.bucket;
+        fotoPath      = up.path;
+        fotoUrl       = up.url;                     // si el bucket es público
+        fotoSizeBytes = up.meta?.sizeBytes ?? null;
+        fotoFormat    = up.meta?.format ?? null;
+        fotoWidth     = dims?.width ?? null;
+        fotoHeight    = dims?.height ?? null;
+      }
+
+      // 2) Armar payload (IMPORTANTE: tamaño -> tamano)
       const payload = {
         nombre: form.nombre.trim(),
         sexo: form.sexo,
-        tamaño: form.tamaño || undefined,
+        tamano: form.tamaño || undefined,
         raza: form.raza || undefined,
         pesoKg: form.peso ? Number(form.peso) : undefined,
         edadMeses,
         cumpleDia,
         cumpleMes,
+
+        // Campos de foto -> tu backend ya los guarda en Prisma
+        fotoBucket,
+        fotoPath,
+        fotoUrl,
+        fotoSizeBytes,
+        fotoWidth,
+        fotoHeight,
+        fotoFormat,
       };
+
       await crearMascota(payload);
       setOk("Mascota registrada");
       setTimeout(() => navigate("/menu"), 800);
     } catch (e) {
-      setErr(e?.response?.data?.error || "No se pudo registrar la mascota");
+      setErr(e?.response?.data?.error || e.message || "No se pudo registrar la mascota");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,11 +186,10 @@ export default function RegistrarMascota() {
           {ok && <div className="alert alert-success py-2">{ok}</div>}
           {err && <div className="alert alert-danger py-2">{err}</div>}
 
-          {/* GRID: Izquierda (Imagen + Nombre) | Derecha (resto) */}
+          {/* GRID */}
           <div className="row g-3">
-            {/* Columna izquierda */}
+            {/* Izquierda: imagen + nombre */}
             <div className="col-12 col-md-5">
-              {/* Zona de imagen clickeable */}
               <div className="mb-2 text-center">
                 <div
                   role="button"
@@ -182,7 +227,6 @@ export default function RegistrarMascota() {
                   )}
                 </div>
 
-                {/* input de archivo oculto */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -192,7 +236,6 @@ export default function RegistrarMascota() {
                 />
               </div>
 
-              {/* Nombre */}
               <div className="mb-2">
                 <label className="form-label">Nombre *</label>
                 <input
@@ -206,9 +249,8 @@ export default function RegistrarMascota() {
               </div>
             </div>
 
-            {/* Columna derecha */}
+            {/* Derecha: resto */}
             <div className="col-12 col-md-7">
-              {/* Fila: Sexo y Tamaño */}
               <div className="row g-2">
                 <div className="col-6">
                   <label className="form-label">Sexo *</label>
@@ -229,7 +271,6 @@ export default function RegistrarMascota() {
                 </div>
               </div>
 
-              {/* Raza (buscador con dropdown) */}
               <div className="mt-2" ref={razaWrapRef}>
                 <label className="form-label">Raza</label>
                 <input
@@ -269,7 +310,6 @@ export default function RegistrarMascota() {
                 </div>
               </div>
 
-              {/* Peso */}
               <div className="mt-2">
                 <label className="form-label">Peso (kg)</label>
                 <input
@@ -283,7 +323,6 @@ export default function RegistrarMascota() {
                 />
               </div>
 
-              {/* Fecha de nacimiento (estimado) */}
               <div className="mt-2">
                 <label className="form-label">Fecha de nacimiento (estimado)</label>
                 <div className="d-flex align-items-center gap-2">
@@ -311,12 +350,11 @@ export default function RegistrarMascota() {
             </div>
           </div>
 
-          {/* Botones */}
           <div className="d-flex justify-content-between gap-3 mt-3">
-            <button type="submit" className="btn btn-success w-50" style={{ borderRadius: 12 }}>
-              OK
+            <button type="submit" className="btn btn-success w-50" style={{ borderRadius: 12 }} disabled={loading}>
+              {loading ? "Guardando..." : "OK"}
             </button>
-            <button type="button" className="btn btn-danger w-50" style={{ borderRadius: 12 }} onClick={handleCancel}>
+            <button type="button" className="btn btn-danger w-50" style={{ borderRadius: 12 }} onClick={handleCancel} disabled={loading}>
               Cancelar
             </button>
           </div>

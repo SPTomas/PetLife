@@ -44,8 +44,7 @@ export default function DetallePerro() {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [id]);
-
-  const img = pet?.fotoUrl || pet?.photoPath || "/imagenes/pets/default.png";
+  const img = pet?._fotoUrl || pet?.fotoUrl || "/imagenes/pets/default.png";
   const nombre = pet?.nombre || "Mascota";
 
   // Derivaciones y fallbacks

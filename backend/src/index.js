@@ -93,9 +93,9 @@ app.get(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, next
 
 app.post(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, next) => {
   try {
-    // Normalizar 'tamaño' → 'tamano' por si viene desde el front con tilde
-    const body = { ...req.body, tamano: req.body.tamano ?? req.body['tamaño'] };
-    const parsed = mascotaCreateSchema.safeParse(body);
+    // Normalizar tamaño → tamano
+    const raw = { ...req.body, tamano: req.body.tamano ?? req.body['tamaño'] };
+    const parsed = mascotaCreateSchema.safeParse(raw);
     if (!parsed.success) {
       return res.status(400).json({ error: 'Bad input', issues: parsed.error.issues });
     }
@@ -103,61 +103,74 @@ app.post(['/api/me/mascotas', '/api/me/dogs'], requireAuth, async (req, res, nex
 
     const mascota = await prisma.mascota.create({
       data: {
-        duenioId: req.user.id,
-        nombre: b.nombre,
-        sexo: b.sexo, // requerido por Prisma
-        tamano: b.tamano ?? null,
-        raza: b.raza ?? null,
-        edadMeses: b.edadMeses ?? null,
-        pesoKg: b.pesoKg ?? null,
-        cumpleDia: b.cumpleDia ?? null,
-        cumpleMes: b.cumpleMes ?? null,
-        // Si luego usás campos de foto (fotoPath/Url/etc), agréguelos acá con los nombres correctos.
-      },
+        duenioId:   req.user.id,
+        nombre:     b.nombre,
+        sexo:       b.sexo,
+        tamano:     b.tamano ?? null,
+        raza:       b.raza ?? null,
+        edadMeses:  b.edadMeses ?? null,
+        pesoKg:     b.pesoKg ?? null,
+        cumpleDia:  b.cumpleDia ?? null,
+        cumpleMes:  b.cumpleMes ?? null,
+
+        // 👇 NUEVO: Campos de foto (opcionales)
+        fotoBucket:     raw.fotoBucket ?? null,
+        fotoPath:       raw.fotoPath ?? null,      // OJO: el front enviará fotoPath
+        fotoUrl:        raw.fotoUrl ?? null,       // si usás bucket público
+        fotoSizeBytes:  raw.fotoSizeBytes ?? null,
+        fotoWidth:      raw.fotoWidth ?? null,
+        fotoHeight:     raw.fotoHeight ?? null,
+        fotoFormat:     raw.fotoFormat ?? null,
+      }
     });
+
     res.status(201).json(mascota);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-app.put(
-  ['/api/me/mascotas/:id', '/api/me/dogs/:id'],
-  requireAuth,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
-      const body = { ...req.body, tamano: req.body.tamano ?? req.body['tamaño'] };
-      const parsed = mascotaUpdateSchema.safeParse(body);
-      if (!parsed.success) {
-        return res.status(400).json({ error: 'Bad input', issues: parsed.error.issues });
-      }
-      const b = parsed.data;
 
-      const existing = await prisma.mascota.findUnique({ where: { id } });
-      if (!existing || existing.duenioId !== req.user.id) {
-        return res.status(404).json({ error: 'Mascota no encontrada' });
-      }
-
-      const mascota = await prisma.mascota.update({
-        where: { id },
-        data: {
-          nombre: b.nombre ?? existing.nombre,
-          sexo: b.sexo ?? existing.sexo,
-          tamano: b.tamano ?? existing.tamano,
-          raza: b.raza ?? existing.raza,
-          edadMeses: b.edadMeses ?? existing.edadMeses,
-          pesoKg: b.pesoKg ?? existing.pesoKg,
-          cumpleDia: b.cumpleDia ?? existing.cumpleDia,
-          cumpleMes: b.cumpleMes ?? existing.cumpleMes,
-        },
-      });
-      res.json(mascota);
-    } catch (err) {
-      next(err);
+app.put(['/api/me/mascotas/:id', '/api/me/dogs/:id'], requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const raw = { ...req.body, tamano: req.body.tamano ?? req.body['tamaño'] };
+    const parsed = mascotaUpdateSchema.safeParse(raw);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Bad input', issues: parsed.error.issues });
     }
-  }
-);
+    const b = parsed.data;
+
+    const existing = await prisma.mascota.findUnique({ where: { id } });
+    if (!existing || existing.duenioId !== req.user.id) {
+      return res.status(404).json({ error: 'Mascota no encontrada' });
+    }
+
+    const mascota = await prisma.mascota.update({
+      where: { id },
+      data: {
+        nombre:     b.nombre ?? existing.nombre,
+        sexo:       b.sexo ?? existing.sexo,
+        tamano:     b.tamano ?? existing.tamano,
+        raza:       b.raza ?? existing.raza,
+        edadMeses:  b.edadMeses ?? existing.edadMeses,
+        pesoKg:     b.pesoKg ?? existing.pesoKg,
+        cumpleDia:  b.cumpleDia ?? existing.cumpleDia,
+        cumpleMes:  b.cumpleMes ?? existing.cumpleMes,
+
+        // Campos de foto (si vienen)
+        fotoBucket:     raw.fotoBucket ?? existing.fotoBucket,
+        fotoPath:       raw.fotoPath ?? existing.fotoPath,
+        fotoUrl:        raw.fotoUrl ?? existing.fotoUrl,
+        fotoSizeBytes:  raw.fotoSizeBytes ?? existing.fotoSizeBytes,
+        fotoWidth:      raw.fotoWidth ?? existing.fotoWidth,
+        fotoHeight:     raw.fotoHeight ?? existing.fotoHeight,
+        fotoFormat:     raw.fotoFormat ?? existing.fotoFormat,
+      }
+    });
+
+    res.json(mascota);
+  } catch (err) { next(err); }
+});
+
 
 app.delete(
   ['/api/me/mascotas/:id', '/api/me/dogs/:id'],

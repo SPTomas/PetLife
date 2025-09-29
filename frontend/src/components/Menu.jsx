@@ -1,3 +1,4 @@
+// frontend/src/components/Menu.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarMascotas, eliminarMascota } from "../services/mascotasService";
@@ -9,24 +10,47 @@ export default function Menu() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [petToDelete, setPetToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      console.log("SESSION:", data);
-    });
+  // Resuelve una URL pública a partir de fotoPath (bucket público)
+  function publicUrlFromPath(path) {
+    if (!path) return null;
+    const { data } = supabase.storage.from("pets").getPublicUrl(path);
+    return data?.publicUrl || null;
+  }
 
-    listarMascotas()
-      .then(setPets)
-      .catch(e =>
-        setErr(e?.response?.data?.error || e?.message || "No se pudieron cargar tus mascotas")
-      );
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const rows = await listarMascotas();
+
+        // Para cada mascota:
+        // - si ya viene fotoUrl desde la DB la usamos
+        // - sino, si hay fotoPath, calculamos la URL pública
+        const withUrls = rows.map((p) => ({
+          ...p,
+          _fotoUrl: p.fotoUrl || (p.fotoPath ? publicUrlFromPath(p.fotoPath) : null),
+        }));
+
+        if (alive) setPets(withUrls);
+      } catch (e) {
+        if (!alive) return;
+        setErr(e?.response?.data?.error || e?.message || "No se pudieron cargar tus mascotas");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   const handleAddPet = () => navigate("/registrar-mascota");
 
   const handleSelect = (pet) => {
-    navigate(`/perro/${pet.id}`, { state: { petPreview: pet } });
+    // pasamos la previsualización con la URL resuelta
+    navigate(`/perro/${pet.id}`, { state: { petPreview: { ...pet, fotoUrl: pet._fotoUrl || pet.fotoUrl } } });
   };
 
   const handleProfile = () => navigate("/consultar-usuario");
@@ -84,7 +108,9 @@ export default function Menu() {
 
         {/* Lista */}
         <div className="px-3 pb-3 pt-3">
+          {loading && <div className="alert alert-info py-2">Cargando mascotas…</div>}
           {err && <div className="alert alert-danger">{err}</div>}
+
           <ul className="list-unstyled m-0">
             {pets.map((pet) => (
               <li key={pet.id} className="mb-2">
@@ -99,7 +125,7 @@ export default function Menu() {
                     style={{ outline: "none", boxShadow: "none" }}
                   >
                     <img
-                      src={pet.photoPath || "/imagenes/pets/default.png"}
+                      src={pet._fotoUrl || "/imagenes/pets/default.png"}
                       alt={pet.nombre}
                       className="me-3"
                       style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, border: "1px solid #e6e6e6", background: "#f8fafc" }}
@@ -125,7 +151,7 @@ export default function Menu() {
               </li>
             ))}
 
-            {/* Añadir mascota (sin icono a la izquierda) */}
+            {/* Añadir mascota */}
             <li>
               <div
                 className="w-100 d-flex align-items-center justify-content-between rounded-4 px-3 py-3"
@@ -166,11 +192,7 @@ export default function Menu() {
               <button className="btn btn-secondary" onClick={cancelDelete} disabled={deleting}>
                 Cancelar
               </button>
-              <button
-                className="btn btn-danger"
-                onClick={confirmDelete}
-                disabled={deleting}
-              >
+              <button className="btn btn-danger" onClick={confirmDelete} disabled={deleting}>
                 {deleting ? "Eliminando..." : "Aceptar"}
               </button>
             </div>
