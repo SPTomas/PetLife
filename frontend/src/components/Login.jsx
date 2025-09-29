@@ -1,30 +1,53 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmail } from "../services/authService";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
   const navigate = useNavigate();
+
+  // Colores de marca
+  const BRAND = "#2389C0";
+  const BRAND_DARK = "#0b6fa4";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submit:", form);
-    navigate("/menu");
+    setErr("");
+    setLoading(true);
+    try {
+      await signInWithEmail(form.email.trim(), form.password);
+      navigate("/menu");
+    } catch (e) {
+      setErr(e?.message || "Error al iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRegister = () => {
-    navigate("/registrar-usuario");
+  const handleRegister = () => navigate("/registrar-usuario");
+  const handleForgot = (e) => {
+    e.preventDefault();
+    navigate("/recuperar-password");
   };
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    // Fondo blanco (como Loginvisual)
+    <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: "#fff" }}>
       <div
-        className="bg-white p-4 shadow-sm"
-        style={{ width: 340, borderRadius: "22px", border: "2px solid #111" }}
+        className="bg-white p-4"
+        style={{
+          width: 340,
+          borderRadius: "22px",
+          border: "none",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+        }}
       >
         {/* Logo */}
         <div className="text-center mb-3">
@@ -33,13 +56,15 @@ export default function Login() {
             alt="PetLife"
             style={{ width: 100, height: "auto", objectFit: "contain" }}
           />
-          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: "#2389c0ff" }}>
+          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: BRAND }}>
             PetLife
           </h3>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
+          {err && <div className="alert alert-danger py-2">{err}</div>}
+
           <div className="mb-2">
             <small className="text-muted d-block">Usuario:</small>
             <input
@@ -50,6 +75,7 @@ export default function Login() {
               value={form.email}
               onChange={handleChange}
               required
+              autoComplete="email"
             />
           </div>
 
@@ -63,37 +89,52 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               required
+              autoComplete="current-password"
             />
           </div>
 
-          {/* Iniciar sesión */}
+          {/* Iniciar sesión (primario marca) */}
           <button
             type="submit"
-            className="btn btn-dark w-100 mb-2"
-            style={{ borderRadius: 12 }}
+            className="btn w-100 mb-2"
+            disabled={loading}
+            style={{
+              borderRadius: 12,
+              backgroundColor: BRAND,
+              border: `2px solid ${BRAND}`,
+              color: "#fff",
+            }}
           >
-            Iniciar sesión
+            {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>
 
-          {/* Registrar */}
+          {/* Registrar (outline marca) */}
           <button
             type="button"
-            className="btn btn-outline-dark w-100"
-            style={{ borderWidth: 2, borderRadius: 12 }}
+            className="btn w-100"
             onClick={handleRegister}
+            style={{
+              borderRadius: 12,
+              backgroundColor: "#fff",
+              border: `2px solid ${BRAND}`,
+              color: BRAND,
+            }}
           >
             Registrar
           </button>
 
-          {/* Link "Olvidé mi contraseña" */}
-          <div className="text-center mb-3">
+          {/* Link "Olvidé mi contraseña" (azul) */}
+          <div className="text-center mb-2">
             <a
               href="#"
-              style={{ color: "#0b6fa4", textDecoration: "none", fontSize: 14 }}
+              onClick={handleForgot}
+              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
             >
               Olvidé mi contraseña
             </a>
           </div>
+
+
         </form>
       </div>
     </div>

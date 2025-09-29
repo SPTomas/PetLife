@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signUpWithEmail } from "../services/authService";
 
 export default function RegistrarUsuario() {
   const navigate = useNavigate();
@@ -9,23 +10,30 @@ export default function RegistrarUsuario() {
     password: "",
     confirmPassword: "",
   });
+  const [ok, setOk] = useState("");
+  const [err, setErr] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErr(""); setOk("");
 
     if (form.password !== form.confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      setErr("Las contraseñas no coinciden");
       return;
     }
 
-    console.log("Registrar usuario:", form);
-    // TODO: mandar datos al backend
-    navigate("/login"); // vuelve al login luego de registrarse
+    try {
+      await signUpWithEmail(form.email, form.password);
+      setOk("Usuario registrado. Iniciá sesión.");
+      setTimeout(() => navigate("/login"), 1000);
+    } catch (e) {
+      setErr(e.message || "Error al registrar");
+    }
   };
 
   const handleCancel = () => {
@@ -50,8 +58,10 @@ export default function RegistrarUsuario() {
           </h3>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit}>
+          {ok && <div className="alert alert-success py-2">{ok}</div>}
+          {err && <div className="alert alert-danger py-2">{err}</div>}
+
           <div className="mb-3">
             <label className="form-label">Nombre</label>
             <input
@@ -60,7 +70,7 @@ export default function RegistrarUsuario() {
               name="nombre"
               value={form.nombre}
               onChange={handleChange}
-              required
+              placeholder="(opcional)"
             />
           </div>
 
@@ -85,6 +95,7 @@ export default function RegistrarUsuario() {
               value={form.password}
               onChange={handleChange}
               required
+              minLength={5}
             />
           </div>
 
@@ -97,23 +108,15 @@ export default function RegistrarUsuario() {
               value={form.confirmPassword}
               onChange={handleChange}
               required
+              minLength={5}
             />
           </div>
 
           <div className="d-flex justify-content-between">
-            <button
-              type="submit"
-              className="btn btn-success w-50 me-2"
-              style={{ borderRadius: 12 }}
-            >
+            <button type="submit" className="btn btn-success w-50 me-2" style={{ borderRadius: 12 }}>
               Registrar
             </button>
-            <button
-              type="button"
-              className="btn btn-danger w-50 ms-2"
-              style={{ borderRadius: 12 }}
-              onClick={handleCancel}
-            >
+            <button type="button" className="btn btn-danger w-50 ms-2" style={{ borderRadius: 12 }} onClick={handleCancel}>
               Cancelar
             </button>
           </div>
