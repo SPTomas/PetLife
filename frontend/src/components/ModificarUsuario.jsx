@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 
 export default function ModificarUsuario() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo || "/menu";
+
 
   const [form, setForm] = useState({ nombre: "", email: "", telefono: "" });
   const [showConfirmSave, setShowConfirmSave] = useState(false);
@@ -39,7 +42,12 @@ export default function ModificarUsuario() {
     try {
       await api.put("/me", { nombre: form.nombre, telefono: form.telefono });
       setSaved(true);
-      setTimeout(() => navigate("/consultar-usuario"), 1200);
+      setTimeout(() => {
+        navigate("/consultar-usuario", {
+          replace: true,
+          state: { from: returnTo, forceFallback: true }
+        });
+      }, 1200);
     } catch (e) {
       setErr(e.response?.data?.error || "No se pudo actualizar");
     } finally {
@@ -48,7 +56,12 @@ export default function ModificarUsuario() {
   };
 
   const handleCancel = () => {
-    if (!saving) navigate("/consultar-usuario");
+    if (!saving) {
+      navigate("/consultar-usuario", {
+        replace: true,
+        state: { from: returnTo, forceFallback: true }
+      });
+    }
   };
 
   const confirmDelete = async () => {

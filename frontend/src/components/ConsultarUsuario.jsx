@@ -87,7 +87,7 @@ export default function ConsultarUsuario() {
               <button
                 className="btn btn-primary w-100 mb-2"
                 style={{ borderRadius: 12 }}
-                onClick={() => navigate("/modificar-usuario", { state: { from: location.pathname } })}
+                onClick={() => navigate("/modificar-usuario", { state: { from: location.pathname, returnTo: fallback } })}
               >
                 Editar datos
               </button>
