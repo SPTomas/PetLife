@@ -1,6 +1,7 @@
 // frontend/src/components/DetallePerro.jsx
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { toPng } from "html-to-image";
 import { obtenerMascota } from "../services/mascotasService";
 
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -63,7 +64,7 @@ export default function DetallePerro() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(!preview);
 
-  // Dropdown Perfil
+  // --- Dropdown Perfil (volver a Mi perfil / Mis mascotas)
   const [openProfileMenu, setOpenProfileMenu] = useState(false);
   const profileBtnRef = useRef(null);
   const profileMenuRef = useRef(null);
@@ -83,6 +84,7 @@ export default function DetallePerro() {
     };
   }, [openProfileMenu]);
 
+  // --- Carga de mascota
   useEffect(() => {
     let alive = true;
     setErr("");
@@ -93,6 +95,44 @@ export default function DetallePerro() {
     return () => { alive = false; };
   }, [id]);
 
+  // --- Exportar / Compartir como PNG (solo el card)
+  const cardRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function compartir() {
+    try {
+      setExporting(true);
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      });
+
+      if (navigator.canShare && window.fetch) {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const nombre = (pet?.nombre || "mascota").toLowerCase().replace(/\s+/g, "-");
+        const file = new File([blob], `petlife-${nombre}.png`, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Ficha de ${pet?.nombre || "mi mascota"} - PetLife`,
+            files: [file],
+          });
+          setExporting(false);
+          return;
+        }
+      }
+
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `petlife-${(pet?.nombre || "mascota").toLowerCase()}.png`;
+      a.click();
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // --- Derivados UI
   const img = pet?._fotoUrl || pet?.fotoUrl || pet?.photoPath || "/imagenes/pets/default.png";
   const nombre = pet?.nombre || "Mascota";
   const sexo = pet?.sexo ?? "—";
@@ -102,7 +142,8 @@ export default function DetallePerro() {
   const fechaNacStr = formatearFechaNacimiento(pet);
   const edadAnhos = calcularEdadAnhos(pet);
 
-  const colors = { border:"#0c4a6e", brand:"#2389c0", halo:"#d9eefc", ink:"#102A43" };
+  const BRAND = "#2389C0";
+  const colors = { border:"#0c4a6e", brand:BRAND, halo:"#d9eefc", ink:"#102A43" };
 
   const goPerfilUsuario = () => { setOpenProfileMenu(false); navigate("/consultar-usuario"); };
   const goMisMascotas   = () => { setOpenProfileMenu(false); navigate("/menu"); };
@@ -113,7 +154,7 @@ export default function DetallePerro() {
       <div className="w-100 shadow-sm mt-4" style={{ maxWidth: 520, borderRadius: 24, border: `2px solid ${colors.border}`, background: "#fff", position:"relative" }}>
         {/* Header */}
         <div className="d-flex align-items-center justify-content-between px-3 pt-3 pb-2" style={{ borderBottom: `1px solid ${colors.halo}`, position:"relative" }}>
-          {/* Dropdown de perfil */}
+          {/* Botón Perfil + menú */}
           <button
             ref={profileBtnRef}
             className="btn btn-light rounded-circle d-flex align-items-center justify-content-center border-0"
@@ -159,12 +200,14 @@ export default function DetallePerro() {
         <div className="px-3 py-3">
           {err && <div className="alert alert-danger">{err}</div>}
 
-          <div className="row g-3 align-items-start">
-            {/* Col izquierda: imagen + nombre debajo */}
+          {/* Card a exportar */}
+          <div className="row g-3 align-items-start" ref={cardRef}>
+            {/* Col izquierda: imagen + nombre */}
             <div className="col-12 col-md-5 d-flex flex-column align-items-center">
               <img
                 src={img}
                 alt={nombre}
+                crossOrigin="anonymous"
                 style={{ width: 160, height: 160, objectFit: "cover", borderRadius: 18, border: "1px solid #e6e6e6", background: "#f8fafc" }}
                 onError={(e) => { e.currentTarget.src = "/imagenes/pets/default.png"; }}
               />
@@ -173,7 +216,7 @@ export default function DetallePerro() {
               </h2>
             </div>
 
-            {/* Col derecha: info alineada a la izquierda */}
+            {/* Col derecha: info */}
             <div className="col-12 col-md-7">
               <div className="mb-2"><strong>Edad:</strong> {edadAnhos === "—" ? "—" : `${edadAnhos} año(s)`}</div>
               <div className="mb-2"><strong>Sexo:</strong> {sexo}</div>
@@ -181,18 +224,32 @@ export default function DetallePerro() {
               <div className="mb-2"><strong>Raza:</strong> {raza}</div>
               <div className="mb-2"><strong>Peso:</strong> {pesoKg} {pesoKg !== "—" ? "kg" : ""}</div>
               <div className="mb-2"><strong>Fecha de nacimiento:</strong> {fechaNacStr}</div>
-
-              <button
-                className="btn btn-outline-secondary btn-sm mt-1"
-                title="Editar datos"
-                onClick={() => navigate(`/perro/${id}/editar`, { state: { petPreview: pet } })}
-              >
-                <i className="bi bi-pencil-square me-1" /> Editar
-              </button>
             </div>
           </div>
 
-          {/* Footer con “Inicio” igual estilo */}
+          {/* Botonera fuera del cardRef (no se exporta) */}
+          <div className="d-flex justify-content-end gap-2 mt-3">
+            <button
+              className="btn"
+              onClick={() => navigate(`/perro/${id}/editar`, { state: { petPreview: pet } })}
+              style={{ borderRadius: 12, backgroundColor: "#fff", border: `2px solid ${BRAND}`, color: BRAND }}
+              title="Editar datos"
+            >
+              <i className="bi bi-pencil-square me-1" /> Editar
+            </button>
+
+            <button
+              className="btn"
+              onClick={compartir}
+              disabled={exporting}
+              style={{ borderRadius: 12, backgroundColor: BRAND, border: `2px solid ${BRAND}`, color: "#fff" }}
+              title="Compartir"
+            >
+              <i className="bi bi-share me-1" /> {exporting ? "Exportando..." : "Compartir"}
+            </button>
+          </div>
+
+          {/* Accesos inferiores */}
           <div className="d-flex justify-content-between align-items-center gap-2 mt-3">
             <button className="btn btn-light flex-fill" title="Comida">
               <i className="bi bi-basket-fill fs-4 d-block" />
