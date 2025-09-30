@@ -1,3 +1,4 @@
+// frontend/src/components/RegistrarUsuario.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUpWithEmail } from "../services/authService";
@@ -28,7 +29,13 @@ export default function RegistrarUsuario() {
     }
 
     try {
-      await signUpWithEmail(form.email, form.password);
+      await signUpWithEmail(
+        form.nombre.trim() || null,
+        form.email.trim(),
+        form.password
+      );
+      // Si tu proyecto tiene confirmación de email, el usuario deberá confirmar
+      // y luego hacer login. En el primer login se creará/completará el perfil en Neon.
       setOk("Usuario registrado. Iniciá sesión.");
       setTimeout(() => navigate("/login"), 1000);
     } catch (e) {
@@ -36,9 +43,7 @@ export default function RegistrarUsuario() {
     }
   };
 
-  const handleCancel = () => {
-    navigate("/login");
-  };
+  const handleCancel = () => navigate("/login");
 
   return (
     <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
@@ -46,13 +51,9 @@ export default function RegistrarUsuario() {
         className="bg-white p-4 shadow-sm"
         style={{ width: 360, borderRadius: 22, border: "2px solid #111" }}
       >
-        {/* Logo */}
         <div className="text-center mb-3">
-          <img
-            src="/imagenes/LogoPetLife.png"
-            alt="PetLife"
-            style={{ width: 100, height: "auto", objectFit: "contain" }}
-          />
+          <img src="/imagenes/LogoPetLife.png" alt="PetLife"
+               style={{ width: 100, height: "auto", objectFit: "contain" }} />
           <h3 className="mt-2 mb-0 fw-semibold" style={{ color: "#2389c0" }}>
             Registrar Usuario
           </h3>

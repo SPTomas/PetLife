@@ -1,8 +1,8 @@
-// frontend/src/components/Menu.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listarMascotas } from "../services/mascotasService";
 import { supabase } from "../lib/supabase";
+import { getOrCreateMe } from "../services/meService";
 
 export default function Menu() {
   const [pets, setPets] = useState([]);
@@ -10,7 +10,6 @@ export default function Menu() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Resuelve una URL pública a partir de fotoPath (bucket público)
   function publicUrlFromPath(path) {
     if (!path) return null;
     const { data } = supabase.storage.from("pets").getPublicUrl(path);
@@ -22,11 +21,14 @@ export default function Menu() {
     (async () => {
       try {
         setLoading(true);
-        const rows = await listarMascotas();
 
-        // Para cada mascota:
-        // - si ya viene fotoUrl desde la DB la usamos
-        // - sino, si hay fotoPath, calculamos la URL pública
+        // ✅ asegura/crea usuario en Neon si hay sesión
+        const { data: s } = await supabase.auth.getSession();
+        if (s?.session?.access_token) {
+          await getOrCreateMe();
+        }
+
+        const rows = await listarMascotas();
         const withUrls = rows.map((p) => ({
           ...p,
           _fotoUrl: p.fotoUrl || (p.fotoPath ? publicUrlFromPath(p.fotoPath) : null),
@@ -44,12 +46,7 @@ export default function Menu() {
   }, []);
 
   const handleAddPet = () => navigate("/registrar-mascota");
-
-  const handleSelect = (pet) => {
-    // pasamos la previsualización con la URL resuelta
-    navigate(`/perro/${pet.id}`, { state: { petPreview: { ...pet, fotoUrl: pet._fotoUrl || pet.fotoUrl } } });
-  };
-
+  const handleSelect = (pet) => navigate(`/perro/${pet.id}`, { state: { petPreview: { ...pet, fotoUrl: pet._fotoUrl || pet.fotoUrl } } });
   const handleProfile = () => navigate("/consultar-usuario");
 
   const colors = {
@@ -71,7 +68,7 @@ export default function Menu() {
             <i className="bi bi-person-fill fs-4" style={{ color: colors.brand }} />
           </button>
           <div className="text-center flex-grow-1">
-            <img src="/imagenes/LogoPetLife.png" alt="PetLife" style={{ width: 100, height: "auto", objectFit: "contain" }} />
+            <img src="/imagenes/LogoPetLife.png" alt="PetLife" style={{ width: 100 }} />
           </div>
           <div style={{ width: 44 }} />
         </div>
@@ -84,16 +81,10 @@ export default function Menu() {
           <ul className="list-unstyled m-0">
             {pets.map((pet) => (
               <li key={pet.id} className="mb-2">
-                <div
-                  className="w-100 d-flex align-items-center bg-white rounded-4 px-3 py-3"
-                  style={{ border: `2px solid ${colors.cardBorder}`, boxShadow: "0 2px 8px rgba(16,42,67,.06)" }}
-                >
-                  {/* Botón principal para abrir la mascota */}
-                  <button
-                    className="btn p-0 border-0 flex-grow-1 text-start d-flex align-items-center bg-transparent"
-                    onClick={() => handleSelect(pet)}
-                    style={{ outline: "none", boxShadow: "none" }}
-                  >
+                <div className="w-100 d-flex align-items-center bg-white rounded-4 px-3 py-3"
+                     style={{ border: `2px solid ${colors.cardBorder}`, boxShadow: "0 2px 8px rgba(16,42,67,.06)" }}>
+                  <button className="btn p-0 border-0 flex-grow-1 text-start d-flex align-items-center bg-transparent"
+                          onClick={() => handleSelect(pet)} style={{ outline: "none", boxShadow: "none" }}>
                     <img
                       src={pet._fotoUrl || "/imagenes/pets/default.png"}
                       alt={pet.nombre}
@@ -109,20 +100,12 @@ export default function Menu() {
               </li>
             ))}
 
-            {/* Añadir mascota */}
             <li>
-              <div
-                className="w-100 d-flex align-items-center justify-content-between rounded-4 px-3 py-3"
-                style={{ border: `2px solid ${colors.cardBorder}`, background: "linear-gradient(180deg, #ffffff 0%, #f7fbff 100%)" }}
-              >
+              <div className="w-100 d-flex align-items-center justify-content-between rounded-4 px-3 py-3"
+                   style={{ border: `2px solid ${colors.cardBorder}`, background: "linear-gradient(180deg, #ffffff 0%, #f7fbff 100%)" }}>
                 <span className="fs-5 fw-semibold" style={{ color: colors.ink }}>AÑADIR MASCOTA</span>
-
-                <button
-                  className="btn btn-outline-primary d-flex align-items-center justify-content-center"
-                  onClick={handleAddPet}
-                  style={{ width: 44, height: 44, borderRadius: 12, borderWidth: 2 }}
-                  aria-label="Agregar mascota" title="Agregar mascota"
-                >
+                <button className="btn btn-outline-primary d-flex align-items-center justify-content-center"
+                        onClick={handleAddPet} style={{ width: 44, height: 44, borderRadius: 12, borderWidth: 2 }} aria-label="Agregar mascota" title="Agregar mascota">
                   <i className="bi bi-plus-lg" />
                 </button>
               </div>

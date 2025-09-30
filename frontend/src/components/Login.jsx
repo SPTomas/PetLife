@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmail } from "../services/authService";
+import { getOrCreateMe } from "../services/meService";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -22,10 +23,16 @@ export default function Login() {
     setErr("");
     setLoading(true);
     try {
+      // 1) login en Supabase
       await signInWithEmail(form.email.trim(), form.password);
+
+      // 2) asegurar que el usuario exista en Neon (crea si no existe)
+      await getOrCreateMe();
+
+      // 3) listo
       navigate("/menu");
     } catch (e) {
-      setErr(e?.message || "Error al iniciar sesión");
+      setErr(e?.message || e?.response?.data?.error || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -38,7 +45,6 @@ export default function Login() {
   };
 
   return (
-    // Fondo blanco (como Loginvisual)
     <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: "#fff" }}>
       <div
         className="bg-white p-4"
@@ -51,14 +57,8 @@ export default function Login() {
       >
         {/* Logo */}
         <div className="text-center mb-3">
-          <img
-            src="/imagenes/LogoPetLife.png"
-            alt="PetLife"
-            style={{ width: 100, height: "auto", objectFit: "contain" }}
-          />
-          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: BRAND }}>
-            PetLife
-          </h3>
+          <img src="/imagenes/LogoPetLife.png" alt="PetLife" style={{ width: 100, height: "auto", objectFit: "contain" }} />
+          <h3 className="mt-2 mb-0 fw-semibold" style={{ color: BRAND }}>PetLife</h3>
         </div>
 
         {/* Form */}
@@ -93,48 +93,29 @@ export default function Login() {
             />
           </div>
 
-          {/* Iniciar sesión (primario marca) */}
           <button
             type="submit"
             className="btn w-100 mb-2"
             disabled={loading}
-            style={{
-              borderRadius: 12,
-              backgroundColor: BRAND,
-              border: `2px solid ${BRAND}`,
-              color: "#fff",
-            }}
+            style={{ borderRadius: 12, backgroundColor: BRAND, border: `2px solid ${BRAND}`, color: "#fff" }}
           >
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>
 
-          {/* Registrar (outline marca) */}
           <button
             type="button"
             className="btn w-100"
             onClick={handleRegister}
-            style={{
-              borderRadius: 12,
-              backgroundColor: "#fff",
-              border: `2px solid ${BRAND}`,
-              color: BRAND,
-            }}
+            style={{ borderRadius: 12, backgroundColor: "#fff", border: `2px solid ${BRAND}`, color: BRAND }}
           >
             Registrar
           </button>
 
-          {/* Link "Olvidé mi contraseña" (azul) */}
           <div className="text-center mb-2">
-            <a
-              href="#"
-              onClick={handleForgot}
-              style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}
-            >
+            <a href="#" onClick={handleForgot} style={{ color: BRAND_DARK, textDecoration: "none", fontSize: 14 }}>
               Olvidé mi contraseña
             </a>
           </div>
-
-
         </form>
       </div>
     </div>

@@ -40,6 +40,58 @@ app.get('/api/me', requireAuth, async (req, res, next) => {
     next(err);
   }
 });
+// ---- Sembrar/actualizar perfil con datos del registro (una sola vez) ----
+const meBootstrapSchema = z.object({
+  nombre: z.string().min(1).optional(),
+  telefono: z.string().optional(),
+});
+
+app.post('/api/me', requireAuth, async (req, res, next) => {
+  try {
+    const data = meBootstrapSchema.parse(req.body);
+
+    // ¿ya existe?
+    const existing = await prisma.usuario.findUnique({ where: { id: req.user.id } });
+
+    if (!existing) {
+      // no existe → crear con lo que venga + correo desde el token
+      const created = await prisma.usuario.create({
+        data: {
+          id: req.user.id,
+          correo: req.user.email ?? '',
+          nombre: data.nombre ?? null,
+          telefono: data.telefono ?? null,
+        },
+      });
+      return res.json({
+        id: created.id,
+        email: created.correo,
+        nombre: created.nombre,
+        telefono: created.telefono,
+      });
+    }
+
+    // existe → sólo completar campos vacíos (no pisar lo que ya tenga)
+    const update = { correo: req.user.email ?? existing.correo };
+    if (!existing.nombre && data.nombre) update.nombre = data.nombre;
+    if (!existing.telefono && data.telefono) update.telefono = data.telefono;
+
+    const updated = await prisma.usuario.update({
+      where: { id: req.user.id },
+      data: update,
+    });
+
+    return res.json({
+      id: updated.id,
+      email: updated.correo,
+      nombre: updated.nombre,
+      telefono: updated.telefono,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 const perfilSchema = z.object({
   nombre: z.string().min(1).optional(),
