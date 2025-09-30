@@ -290,7 +290,7 @@ export default function ModificarPerro() {
       setOk(`Se eliminó a ${form.nombre || "la mascota"}.`);
       setConfirmDeleteOpen(false);
       // Volvemos al menú principal
-      setTimeout(() => navigate("/", { replace: true }), 600);
+      setTimeout(() => navigate("/menu", { replace: true }), 600);
     } catch (e) {
       setErr(e?.response?.data?.error || e.message || "No se pudo eliminar la mascota");
     } finally {
